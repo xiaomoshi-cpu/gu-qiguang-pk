@@ -1,0 +1,1237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>顾齐光六关科目PK</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f7fbff;
+      --muted: #aab7c4;
+      --panel: rgba(12, 18, 26, .78);
+      --line: rgba(255, 255, 255, .16);
+      --sun: #48d6a6;
+      --gold: #ffd166;
+      --red: #ff6262;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 20%, rgba(72, 214, 166, .18), transparent 28%),
+        radial-gradient(circle at 86% 12%, rgba(255, 209, 102, .16), transparent 24%),
+        linear-gradient(135deg, #111923 0%, #182431 52%, #242a32 100%);
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    }
+
+    .game {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+
+    canvas {
+      width: min(100%, 1120px);
+      height: min(72vh, 650px);
+      min-height: 410px;
+      display: block;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #18202b;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .34);
+      touch-action: none;
+    }
+
+    .hud {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      width: min(100% - 42px, 1080px);
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 14px;
+      align-items: start;
+      pointer-events: none;
+    }
+
+    .fighter {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+    }
+
+    .fighter.enemy { text-align: right; }
+
+    .name {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: clamp(13px, 1.7vw, 18px);
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .enemy .name { flex-direction: row-reverse; }
+
+    .bar {
+      height: 15px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .12);
+      outline: 1px solid rgba(255, 255, 255, .12);
+    }
+
+    .energy-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .energy {
+      flex: 1;
+      height: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .1);
+      outline: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .energy-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ffd166, #ff6262);
+      transition: width .18s ease;
+    }
+
+    .fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--sun), #89f0c2);
+      transition: width .18s ease;
+    }
+
+    .enemy .fill {
+      margin-left: auto;
+      background: linear-gradient(90deg, #ff9b73, var(--red));
+    }
+
+    .round {
+      min-width: 150px;
+      padding: 9px 12px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .round strong {
+      display: block;
+      color: var(--gold);
+      font-size: clamp(20px, 4vw, 40px);
+      line-height: 1;
+    }
+
+    .round span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .controls {
+      position: absolute;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(7, 11, 18, .72);
+      backdrop-filter: blur(10px);
+      color: var(--muted);
+      font-size: 13px;
+      user-select: none;
+    }
+
+    .key {
+      min-width: 38px;
+      height: 34px;
+      padding: 0 8px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-bottom-color: rgba(255, 255, 255, .08);
+      border-radius: 7px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04));
+      color: var(--ink);
+      font-weight: 900;
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .24);
+    }
+
+    .message {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      width: min(90vw, 560px);
+      transform: translate(-50%, -50%);
+      display: none;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(9, 13, 20, .88);
+      backdrop-filter: blur(14px);
+      text-align: center;
+      box-shadow: 0 22px 56px rgba(0, 0, 0, .35);
+    }
+
+    .message.show { display: block; }
+
+    .message h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 7vw, 54px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .message p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    button {
+      min-width: 132px;
+      min-height: 42px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--gold);
+      color: #201800;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 10px 26px rgba(255, 209, 102, .22);
+    }
+
+    @media (max-width: 720px) {
+      .game { padding: 10px; min-height: 100vh; }
+      canvas { height: 76vh; min-height: 420px; }
+      .hud {
+        top: 14px;
+        width: calc(100% - 20px);
+        grid-template-columns: 1fr 82px 1fr;
+        gap: 8px;
+      }
+      .round { min-width: 82px; padding: 8px 5px; }
+      .round span { font-size: 10px; }
+      .fighter { padding: 8px; }
+      .name { font-size: 12px; }
+      .bar { height: 12px; }
+      .controls {
+        bottom: 12px;
+        width: calc(100% - 20px);
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px;
+      }
+      .key { min-width: 33px; height: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" aria-label="顾齐光六关科目PK格斗游戏">
+    <canvas id="arena" width="1120" height="640"></canvas>
+
+    <section class="hud" aria-live="polite">
+      <div class="fighter">
+        <div class="name"><span>顾齐光</span><span id="sunHpText">100</span></div>
+        <div class="bar"><div class="fill" id="sunHp"></div></div>
+        <div class="energy-line"><span id="energyText">能量 0/15</span><div class="energy"><div class="energy-fill" id="energyFill"></div></div></div>
+      </div>
+      <div class="round">
+        <strong id="roundText">1/6</strong>
+        <span id="statusText">语文登场</span>
+      </div>
+      <div class="fighter enemy">
+        <div class="name"><span id="enemyName">语文</span><span id="enemyHpText">100</span></div>
+        <div class="bar"><div class="fill" id="enemyHp"></div></div>
+      </div>
+    </section>
+
+    <div class="controls" aria-hidden="true">
+      <span class="key">← 左移</span>
+      <span class="key">→ 右移</span>
+      <span class="key">↑ 跳</span>
+      <span class="key">↓ 蹲</span>
+      <span class="key">空格×2</span>
+      <span class="key">D 拳</span>
+      <span class="key">F 脚</span>
+      <span class="key">S RPG</span>
+    </div>
+
+    <section class="message" id="message">
+      <h1 id="messageTitle">开打</h1>
+      <p id="messageBody">按方向键移动，D 出拳，F 出脚，满能量按 S 发射RPG</p>
+      <button id="restartButton" type="button">再来一局</button>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#arena");
+    const ctx = canvas.getContext("2d");
+    const sunHpBar = document.querySelector("#sunHp");
+    const enemyHpBar = document.querySelector("#enemyHp");
+    const sunHpText = document.querySelector("#sunHpText");
+    const enemyHpText = document.querySelector("#enemyHpText");
+    const energyFill = document.querySelector("#energyFill");
+    const energyText = document.querySelector("#energyText");
+    const enemyName = document.querySelector("#enemyName");
+    const roundText = document.querySelector("#roundText");
+    const statusText = document.querySelector("#statusText");
+    const message = document.querySelector("#message");
+    const messageTitle = document.querySelector("#messageTitle");
+    const messageBody = document.querySelector("#messageBody");
+    const restartButton = document.querySelector("#restartButton");
+
+    const floorY = 514;
+    const comboWindow = 520;
+    const comboStun = 500;
+    const airDiveCooldown = 1500;
+    const ultimateHitsNeeded = 15;
+
+    const subjectData = {
+      chinese: { name: "语文", color: "#ff6f61", aura: "#ffd0ca", motto: "成语连打" },
+      english: { name: "英语", color: "#b982ff", aura: "#e5d3ff", motto: "单词飞踢" },
+      math: { name: "数学", color: "#4ea3ff", aura: "#c6e2ff", motto: "压轴重拳" },
+      fusion: { name: "三科合体", color: "#ffd166", aura: "#fff0b8", motto: "三科压制" },
+      demon: { name: "心魔", color: "#f25f9c", aura: "#ffd0e2", motto: "镜像心法" }
+    };
+
+    const levels = [
+      { title: "语文登场", enemies: [{ key: "chinese", x: 830, speed: 0.34, aggression: 0.45 }] },
+      { title: "英语登场", enemies: [{ key: "english", x: 830, speed: 0.39, aggression: 0.62 }] },
+      { title: "数学登场", enemies: [{ key: "math", x: 830, speed: 0.43, aggression: 0.78 }] },
+      {
+        title: "数学英语夹击",
+        enemies: [
+          { key: "math", x: 250, speed: 0.45, aggression: 0.86 },
+          { key: "english", x: 870, speed: 0.48, aggression: 0.82 }
+        ]
+      },
+      { title: "三科合体", enemies: [{ key: "fusion", x: 830, hp: 200, speed: 0.5, aggression: 0.92, damageScale: 2, aiIntervalScale: 0.5, boss: true }] },
+      { title: "心魔", enemies: [{ key: "demon", x: 830, hp: 100, speed: 0.46, aggression: 0.9, aiIntervalScale: 0.72, mirrorSkills: true, boss: true }] }
+    ];
+
+    const keys = new Set();
+    const particles = [];
+    const popups = [];
+    const rockets = [];
+    let enemies = [];
+    let currentLevel = 0;
+    let gameOver = false;
+    let pauseUntil = 0;
+    let lastTime = performance.now();
+    let shake = 0;
+
+    const player = makeFighter({
+      name: "顾齐光",
+      x: 260,
+      color: "#48d6a6",
+      accent: "#ffe082",
+      facing: 1,
+      isPlayer: true
+    });
+
+    function makeFighter(options) {
+      return {
+        x: 200,
+        y: floorY,
+        vy: 0,
+        w: 72,
+        h: 150,
+        vx: 0,
+        hp: 100,
+        maxHp: 100,
+        damageScale: 1,
+        speed: 0.38,
+        aggression: 0.5,
+        aiIntervalScale: 1,
+        boss: false,
+        mirrorSkills: false,
+        facing: 1,
+        attacking: null,
+        attackType: "",
+        attackTimer: 0,
+        attackDuration: 0,
+        hitDone: false,
+        lockUntil: 0,
+        comboType: "",
+        comboStep: 0,
+        comboHits: 0,
+        lastAttackAt: -9999,
+        airTapAt: -9999,
+        airTapCount: 0,
+        airDiveReady: false,
+        airDiveActive: false,
+        airHangUntil: 0,
+        airDiveCooldownUntil: 0,
+        ultimateHits: 0,
+        ultimateReady: false,
+        hurtTimer: 0,
+        crouching: false,
+        jumping: false,
+        step: 0,
+        aiThinkAt: 0,
+        aiComboAt: 0,
+        crouchUntil: 0,
+        retreatUntil: 0,
+        counterAt: 0,
+        ...options
+      };
+    }
+
+    function makeEnemies() {
+      return levels[currentLevel].enemies.map((entry, index) => {
+        const spec = subjectData[entry.key];
+        return makeFighter({
+          name: spec.name,
+          x: entry.x,
+          color: spec.color,
+          accent: spec.aura,
+          spec,
+          hp: entry.hp || 100,
+          maxHp: entry.hp || 100,
+          damageScale: entry.damageScale || 1,
+          speed: entry.speed,
+          aggression: entry.aggression,
+          aiIntervalScale: entry.aiIntervalScale || 1,
+          boss: Boolean(entry.boss),
+          mirrorSkills: Boolean(entry.mirrorSkills),
+          facing: index === 0 && levels[currentLevel].enemies.length > 1 ? 1 : -1,
+          isEnemy: true
+        });
+      });
+    }
+
+    function resetGame() {
+      currentLevel = 0;
+      gameOver = false;
+      pauseUntil = performance.now() + 650;
+      Object.assign(player, makeFighter({
+        name: "顾齐光",
+        x: 260,
+        color: "#48d6a6",
+        accent: "#ffe082",
+        facing: 1,
+        isPlayer: true
+      }));
+      enemies = makeEnemies();
+      particles.length = 0;
+      popups.length = 0;
+      rockets.length = 0;
+      message.classList.remove("show");
+      syncHud();
+    }
+
+    function nextLevel() {
+      currentLevel += 1;
+      if (currentLevel >= levels.length) {
+        finish("六关全胜", "顾齐光打穿三科合体，也战胜了自己的心魔！");
+        return;
+      }
+      player.hp = Math.min(player.maxHp, player.hp + 24);
+      player.x = currentLevel === 3 ? 560 : 260;
+      player.y = floorY;
+      player.vx = 0;
+      player.vy = 0;
+      enemies = makeEnemies();
+      rockets.length = 0;
+      pauseUntil = performance.now() + 850;
+      burst(canvas.width / 2, 250, "#ffd166", 28);
+      syncHud();
+    }
+
+    function finish(title, body) {
+      gameOver = true;
+      messageTitle.textContent = title;
+      messageBody.textContent = body;
+      message.classList.add("show");
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function livingEnemies() {
+      return enemies.filter((enemy) => enemy.hp > 0);
+    }
+
+    function nearestEnemy(fighter) {
+      const live = livingEnemies();
+      if (!live.length) return null;
+      return live.reduce((best, enemy) => {
+        const current = Math.abs(enemy.x - fighter.x);
+        const previous = Math.abs(best.x - fighter.x);
+        return current < previous ? enemy : best;
+      }, live[0]);
+    }
+
+    function distance(a, b) {
+      return Math.abs((a.x + a.w / 2) - (b.x + b.w / 2));
+    }
+
+    function requestAttack(fighter, type, now) {
+      if (gameOver || now < pauseUntil || now < fighter.lockUntil || fighter.hurtTimer > 0) return;
+      const sameCombo = fighter.comboType === type && now - fighter.lastAttackAt <= comboWindow;
+      if (fighter.attackTimer > 0 && !sameCombo) return;
+      if (fighter.attackTimer > 0 && sameCombo && fighter.comboStep >= 3) return;
+      const step = sameCombo ? clamp(fighter.comboStep + 1, 1, 3) : 1;
+      const isKick = type === "kick";
+      const duration = isKick ? 300 + step * 34 : 230 + step * 28;
+
+      fighter.attackType = type;
+      fighter.attacking = `${type}${step}`;
+      fighter.attackTimer = duration;
+      fighter.attackDuration = duration;
+      fighter.hitDone = false;
+      fighter.comboType = type;
+      fighter.comboStep = step;
+      if (step === 1) fighter.comboHits = 0;
+      fighter.lastAttackAt = now;
+      fighter.vx *= .35;
+    }
+
+    function requestAirDive(fighter, now) {
+      if (gameOver || now < pauseUntil || now < fighter.lockUntil || fighter.hurtTimer > 0) return false;
+      if (now < fighter.airDiveCooldownUntil) return false;
+      if (!fighter.airDiveReady || fighter.y >= floorY - 1) return false;
+      fighter.attackType = "dive";
+      fighter.attacking = "dive3";
+      fighter.attackTimer = 520;
+      fighter.attackDuration = 520;
+      fighter.hitDone = false;
+      fighter.comboType = "dive";
+      fighter.comboStep = 3;
+      fighter.comboHits = 2;
+      fighter.lastAttackAt = now;
+      fighter.airDiveReady = false;
+      fighter.airDiveActive = true;
+      fighter.airHangUntil = 0;
+      fighter.airDiveCooldownUntil = now + airDiveCooldown;
+      fighter.vx = fighter.facing * 10.5;
+      fighter.vy = 8.5;
+      burst(fighter.x + fighter.w / 2, fighter.y - fighter.h, "#ffd166", 12);
+      return true;
+    }
+
+    function hit(attacker, defender) {
+      if (!attacker.attacking || attacker.hitDone || defender.hp <= 0 || defender.hurtTimer > 0) return;
+      const isDive = attacker.attackType === "dive";
+      const elapsed = attacker.attackDuration - attacker.attackTimer;
+      const hitStart = isDive ? .18 : .38;
+      const hitEnd = isDive ? .86 : .76;
+      if (elapsed < attacker.attackDuration * hitStart || elapsed > attacker.attackDuration * hitEnd) return;
+
+      const isKick = attacker.attackType === "kick";
+      const step = attacker.comboStep || 1;
+      const range = isDive ? 152 : (isKick ? 122 : 96) + step * 10;
+      const fullComboBonus = step === 3 && attacker.comboHits >= 2 ? 5 : 0;
+      const power = Math.round((isDive ? 20 : 5 + fullComboBonus) * attacker.damageScale);
+
+      if (distance(attacker, defender) <= range && Math.sign(defender.x - attacker.x) === attacker.facing) {
+        defender.hp = clamp(defender.hp - power, 0, defender.maxHp);
+        if (attacker.isPlayer || attacker.mirrorSkills) {
+          attacker.hp = clamp(attacker.hp + power * (isDive ? .8 : .5), 0, attacker.maxHp);
+        }
+        defender.hurtTimer = 80;
+        if (isDive) {
+          defender.lockUntil = Math.max(defender.lockUntil, performance.now() + 500);
+          attacker.airDiveActive = false;
+          attacker.x = clamp(attacker.x - attacker.facing * attacker.w * .5, 70, canvas.width - 70 - attacker.w);
+          attacker.vx = -attacker.facing * 5.5;
+          attacker.vy = Math.min(attacker.vy, -2);
+        }
+        defender.vx = attacker.facing * (6 + step);
+        attacker.hitDone = true;
+        attacker.comboHits += 1;
+        if (attacker.isPlayer && !attacker.ultimateReady) {
+          attacker.ultimateHits = clamp(attacker.ultimateHits + 1, 0, ultimateHitsNeeded);
+          if (attacker.ultimateHits >= ultimateHitsNeeded) {
+            attacker.ultimateReady = true;
+            pop(attacker.x + attacker.w / 2, attacker.y - attacker.h - 72, "RPG已就绪");
+          }
+        }
+        shake = isDive ? 16 : isKick ? 10 + step * 2 : 7 + step * 2;
+        burst(defender.x + defender.w / 2, defender.y - defender.h * .58, attacker.color, 10 + step * 6);
+        pop(defender.x + defender.w / 2, defender.y - defender.h - 22, isDive ? `空降3连 -${power}` : `${step}连 -${power}`);
+      }
+    }
+
+    function tapSpaceJump(now) {
+      if (gameOver) {
+        resetGame();
+        return;
+      }
+      if (now < pauseUntil || now < player.lockUntil) return;
+      if (now < player.airDiveCooldownUntil) {
+        pop(player.x + player.w / 2, player.y - player.h - 58, "空降冷却");
+        return;
+      }
+      player.airTapCount = now - player.airTapAt <= 420 ? player.airTapCount + 1 : 1;
+      player.airTapAt = now;
+      if (player.y >= floorY - 1) {
+        player.vy = -13.4;
+        player.jumping = true;
+      }
+      if (player.airTapCount >= 2) {
+        player.vy = -19.2;
+        player.jumping = true;
+        player.airDiveReady = true;
+        player.airHangUntil = now + 900;
+        player.airTapCount = 0;
+        pop(player.x + player.w / 2, player.y - player.h - 58, "空降准备");
+      }
+    }
+
+    function launchRocket(now) {
+      if (gameOver || now < pauseUntil || now < player.lockUntil || !player.ultimateReady) return false;
+      player.ultimateReady = false;
+      player.ultimateHits = 0;
+      rockets.push({
+        x: player.x + player.w / 2 + player.facing * 58,
+        y: player.y - 98,
+        vx: player.facing * 15,
+        facing: player.facing,
+        life: 1500
+      });
+      burst(player.x + player.w / 2 + player.facing * 44, player.y - 98, "#ffd166", 10);
+      pop(player.x + player.w / 2, player.y - player.h - 72, "RPG发射");
+      shake = 8;
+      return true;
+    }
+
+    function updatePlayer(dt, now) {
+      player.crouching = keys.has("ArrowDown") && player.y >= floorY - 1;
+      if (keys.has("ArrowUp") && player.y >= floorY - 1 && now >= player.lockUntil) {
+        player.vy = -13.4;
+        player.jumping = true;
+        player.airDiveReady = false;
+        player.airHangUntil = 0;
+      }
+
+      let move = 0;
+      if (keys.has("ArrowLeft")) move -= 1;
+      if (keys.has("ArrowRight")) move += 1;
+      if (move && !player.crouching && now >= player.lockUntil) {
+        player.vx += move * .64 * dt;
+        player.facing = move;
+      }
+
+      const target = nearestEnemy(player);
+      if (target && !move) player.facing = target.x < player.x ? -1 : 1;
+    }
+
+    function enemyBrain(enemy, dt, now) {
+      if (enemy.hp <= 0 || enemy.hurtTimer > 0 || now < pauseUntil || now < enemy.lockUntil) return;
+      enemy.facing = player.x < enemy.x ? -1 : 1;
+      const gap = distance(enemy, player);
+      const playerThreat = player.attacking && gap < 155 && Math.sign(enemy.x - player.x) === player.facing;
+
+      if (enemy.mirrorSkills) {
+        if (enemy.airDiveReady && enemy.y < floorY - 1 && gap < 210 && requestAirDive(enemy, now)) {
+          enemy.aiThinkAt = now + 680;
+          return;
+        }
+        if (!enemy.airDiveReady && now >= enemy.airDiveCooldownUntil && enemy.y >= floorY - 1 && gap < 230 && Math.random() < .018) {
+          enemy.vy = -19.2;
+          enemy.jumping = true;
+          enemy.airDiveReady = true;
+          enemy.airHangUntil = now + 900;
+          enemy.aiThinkAt = now + 520;
+          pop(enemy.x + enemy.w / 2, enemy.y - enemy.h - 58, "空降准备");
+          return;
+        }
+      }
+
+      if (enemy.attackTimer > 0) {
+        const elapsed = enemy.attackDuration - enemy.attackTimer;
+        const canContinue = enemy.comboStep < 3 && gap < 152 && elapsed > enemy.attackDuration * .42;
+        if (canContinue && now > enemy.aiComboAt && Math.random() < enemy.aggression) {
+          requestAttack(enemy, enemy.comboType || enemy.attackType || "punch", now);
+          enemy.aiComboAt = now + 120 * enemy.aiIntervalScale;
+        }
+        return;
+      }
+
+      if (playerThreat && now > enemy.aiThinkAt) {
+        const roll = Math.random();
+        if (roll < .34 && enemy.y >= floorY - 1) {
+          enemy.vy = -12.5;
+        } else if (roll < .66) {
+          enemy.crouchUntil = now + 360;
+        } else {
+          enemy.retreatUntil = now + 440;
+        }
+        enemy.counterAt = now + 260 * enemy.aiIntervalScale;
+        enemy.aiThinkAt = now + (500 - currentLevel * 35) * enemy.aiIntervalScale;
+      }
+
+      enemy.crouching = now < enemy.crouchUntil && enemy.y >= floorY - 1;
+
+      if (now < enemy.retreatUntil) {
+        enemy.vx -= enemy.facing * (.52 + enemy.speed) * dt;
+      } else if (gap > 124) {
+        enemy.vx += enemy.facing * enemy.speed * dt;
+      } else if (now >= enemy.counterAt && (Math.random() < enemy.aggression || now > enemy.aiThinkAt)) {
+        const type = Math.random() > .46 ? "punch" : "kick";
+        requestAttack(enemy, type, now);
+        enemy.aiComboAt = now + 150 * enemy.aiIntervalScale;
+        enemy.aiThinkAt = now + (560 - currentLevel * 50) * enemy.aiIntervalScale;
+      } else if (gap < 82) {
+        enemy.vx -= enemy.facing * .18 * dt;
+      }
+    }
+
+    function updateFighter(fighter, dt, now) {
+      const wasAttacking = fighter.attackTimer > 0;
+      fighter.attackTimer = Math.max(0, fighter.attackTimer - dt * 16.67);
+      fighter.hurtTimer = Math.max(0, fighter.hurtTimer - dt * 16.67);
+      if (wasAttacking && fighter.attackTimer <= 0) {
+        const playerTripleHit = fighter.isPlayer && fighter.comboStep >= 3 && fighter.comboHits > 0;
+        if (fighter.comboStep >= 2 && !playerTripleHit) {
+          fighter.lockUntil = Math.max(fighter.lockUntil, now + comboStun);
+        }
+        fighter.attacking = null;
+        fighter.attackType = "";
+        fighter.airDiveActive = false;
+      }
+
+      const hanging = fighter.airDiveReady && now < fighter.airHangUntil && fighter.vy > -1.4;
+      fighter.vy += (hanging ? .12 : .72) * dt;
+      if (hanging) {
+        fighter.vy = Math.min(fighter.vy, .55);
+      }
+      if (fighter.airDiveActive) {
+        fighter.vx = fighter.facing * 10.5;
+        fighter.vy = Math.max(fighter.vy, 8.5);
+      }
+      fighter.y += fighter.vy * dt;
+      if (fighter.y >= floorY) {
+        fighter.y = floorY;
+        fighter.vy = 0;
+        fighter.jumping = false;
+        fighter.airDiveReady = false;
+        fighter.airDiveActive = false;
+      } else {
+        fighter.jumping = true;
+      }
+
+      const friction = fighter.crouching ? .7 : .84;
+      fighter.vx *= friction;
+      fighter.vx = clamp(fighter.vx, -8.2, 8.2);
+      fighter.x += fighter.vx * dt;
+      fighter.x = clamp(fighter.x, 70, canvas.width - 70 - fighter.w);
+      fighter.step += Math.abs(fighter.vx) * .08 + (fighter.jumping ? .08 : 0);
+    }
+
+    function update(dt, now) {
+      if (!gameOver && now >= pauseUntil) {
+        updatePlayer(dt, now);
+        enemies.forEach((enemy) => enemyBrain(enemy, dt, now));
+        enemies.forEach((enemy) => {
+          hit(player, enemy);
+          hit(enemy, player);
+        });
+      }
+
+      updateFighter(player, dt, now);
+      enemies.forEach((enemy) => updateFighter(enemy, dt, now));
+      updateRockets(dt);
+      updateEffects(dt);
+
+      if (!gameOver) {
+        if (livingEnemies().length === 0) nextLevel();
+        if (player.hp <= 0) {
+          const live = livingEnemies()[0] || enemies[0];
+          finish("惜败", `${live.name}守住了第 ${currentLevel + 1} 关。`);
+        }
+      }
+
+      shake *= .84;
+      syncHud();
+    }
+
+    function updateEffects(dt) {
+      for (let i = particles.length - 1; i >= 0; i -= 1) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += .26 * dt;
+        p.life -= dt * 16.67;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+      for (let i = popups.length - 1; i >= 0; i -= 1) {
+        const p = popups[i];
+        p.y -= .8 * dt;
+        p.life -= dt * 16.67;
+        if (p.life <= 0) popups.splice(i, 1);
+      }
+    }
+
+    function updateRockets(dt) {
+      for (let i = rockets.length - 1; i >= 0; i -= 1) {
+        const rocket = rockets[i];
+        rocket.x += rocket.vx * dt;
+        rocket.life -= dt * 16.67;
+
+        const target = livingEnemies().find((enemy) => {
+          const enemyCx = enemy.x + enemy.w / 2;
+          const enemyCy = enemy.y - enemy.h * .55;
+          return Math.abs(rocket.x - enemyCx) < 52 && Math.abs(rocket.y - enemyCy) < 86;
+        });
+
+        if (target) {
+          target.hp = clamp(target.hp - 40, 0, target.maxHp);
+          target.hurtTimer = 240;
+          target.lockUntil = Math.max(target.lockUntil, performance.now() + 500);
+          target.vx = rocket.facing * 16;
+          shake = 22;
+          burst(target.x + target.w / 2, target.y - target.h * .55, "#ff9b3d", 48);
+          burst(target.x + target.w / 2, target.y - target.h * .55, "#fff0b8", 22);
+          pop(target.x + target.w / 2, target.y - target.h - 30, "RPG -40");
+          rockets.splice(i, 1);
+        } else if (rocket.life <= 0 || rocket.x < -80 || rocket.x > canvas.width + 80) {
+          rockets.splice(i, 1);
+        }
+      }
+    }
+
+    function syncHud() {
+      const sunPercent = Math.round(player.hp / player.maxHp * 100);
+      const totalEnemyHp = enemies.reduce((sum, enemy) => sum + Math.max(0, enemy.hp), 0);
+      const totalEnemyMax = enemies.reduce((sum, enemy) => sum + enemy.maxHp, 0) || 1;
+      const enemyPercent = Math.round(totalEnemyHp / totalEnemyMax * 100);
+      sunHpBar.style.width = `${sunPercent}%`;
+      enemyHpBar.style.width = `${enemyPercent}%`;
+      sunHpText.textContent = Math.ceil(player.hp);
+      enemyHpText.textContent = Math.ceil(totalEnemyHp);
+      enemyName.textContent = enemies.map((enemy) => enemy.name).join(" + ");
+      energyFill.style.width = `${player.ultimateReady ? 100 : Math.round(player.ultimateHits / ultimateHitsNeeded * 100)}%`;
+      energyText.textContent = player.ultimateReady ? "S RPG 就绪" : `能量 ${player.ultimateHits}/${ultimateHitsNeeded}`;
+      roundText.textContent = `${currentLevel + 1}/6`;
+      const locked = performance.now() < player.lockUntil ? "僵直中" : levels[currentLevel].title;
+      statusText.textContent = gameOver ? "PK结束" : locked;
+    }
+
+    function draw() {
+      ctx.save();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const jolt = shake > .5 ? (Math.random() - .5) * shake : 0;
+      ctx.translate(jolt, 0);
+      drawBackground();
+      drawLevelCards();
+      drawRockets();
+      enemies.forEach((enemy) => drawFighter(enemy));
+      drawFighter(player);
+      drawEffects();
+      ctx.restore();
+    }
+
+    function drawBackground() {
+      const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      sky.addColorStop(0, "#1d2c3b");
+      sky.addColorStop(.58, "#22313e");
+      sky.addColorStop(.59, "#31343b");
+      sky.addColorStop(1, "#151920");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "rgba(255,255,255,.045)";
+      for (let i = 0; i < 12; i += 1) {
+        const x = i * 112 - 20;
+        ctx.fillRect(x, 112 + (i % 3) * 24, 72, 180);
+      }
+
+      ctx.fillStyle = "rgba(255, 209, 102, .12)";
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, 220, 170, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255,255,255,.12)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, floorY);
+      ctx.lineTo(canvas.width, floorY);
+      ctx.stroke();
+
+      for (let i = 0; i < 18; i += 1) {
+        ctx.strokeStyle = i % 2 ? "rgba(255,255,255,.07)" : "rgba(72,214,166,.13)";
+        ctx.beginPath();
+        ctx.moveTo(i * 72 - 30, floorY + 8);
+        ctx.lineTo(i * 72 + 28, canvas.height);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "rgba(0,0,0,.22)";
+      ctx.fillRect(0, floorY + 3, canvas.width, canvas.height - floorY);
+    }
+
+    function drawRockets() {
+      rockets.forEach((rocket) => {
+        ctx.save();
+        ctx.translate(rocket.x, rocket.y);
+        ctx.scale(rocket.facing, 1);
+        ctx.fillStyle = "#d9e4ef";
+        roundRect(-26, -8, 46, 16, 7);
+        ctx.fill();
+        ctx.fillStyle = "#ff6262";
+        ctx.beginPath();
+        ctx.moveTo(24, 0);
+        ctx.lineTo(10, -12);
+        ctx.lineTo(10, 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#ffd166";
+        ctx.beginPath();
+        ctx.moveTo(-28, 0);
+        ctx.lineTo(-46, -10);
+        ctx.lineTo(-40, 0);
+        ctx.lineTo(-46, 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function drawLevelCards() {
+      const cardWidth = levels.length > 4 ? 124 : 142;
+      const gap = 16;
+      const startX = canvas.width / 2 - (levels.length * cardWidth + (levels.length - 1) * gap) / 2;
+      levels.forEach((level, i) => {
+        const x = startX + i * (cardWidth + gap);
+        const active = i === currentLevel && !gameOver;
+        ctx.save();
+        ctx.globalAlpha = active ? .95 : .35;
+        ctx.fillStyle = active ? "#ffd166" : "rgba(255,255,255,.18)";
+        roundRect(x, 64, cardWidth, 54, 8);
+        ctx.fill();
+        ctx.fillStyle = active ? "#111820" : "rgba(255,255,255,.8)";
+        ctx.font = "900 20px Microsoft YaHei, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${i + 1}关`, x + cardWidth / 2, 87);
+        ctx.font = "700 15px Microsoft YaHei, sans-serif";
+        ctx.fillText(level.title, x + cardWidth / 2, 108);
+        ctx.restore();
+      });
+    }
+
+    function drawFighter(f) {
+      if (f.hp <= 0) return;
+      const cx = f.x + f.w / 2;
+      if (f.airDiveActive) {
+        drawDiveFighter(f, cx);
+        return;
+      }
+      const bodyH = f.crouching ? f.h * .72 : f.h;
+      const bodyY = f.y - bodyH;
+      const headY = bodyY + 30;
+      const bob = Math.sin(f.step) * (f.jumping ? 1 : 3);
+      const hurt = f.hurtTimer > 0;
+      const attacking = f.attacking;
+      const isKick = f.attackType === "kick";
+      const isDive = f.attackType === "dive";
+      const combo = f.comboStep || 1;
+
+      ctx.save();
+      ctx.translate(0, bob);
+      ctx.fillStyle = "rgba(0,0,0,.32)";
+      ctx.beginPath();
+      ctx.ellipse(cx, floorY + 5, f.crouching ? 48 : 56, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = hurt ? "#ffffff" : f.color;
+      ctx.lineWidth = f.crouching ? 12 : 13;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.beginPath();
+      ctx.moveTo(cx, headY + 42);
+      ctx.lineTo(cx, f.y - 48);
+      ctx.stroke();
+
+      const armY = f.y - (f.crouching ? 70 : 95);
+      const armReach = isDive ? 96 : !isKick && attacking ? 70 + combo * 14 : 42;
+      const armLift = isDive ? 42 : f.jumping ? -18 : f.crouching ? 14 : -8;
+      ctx.beginPath();
+      ctx.moveTo(cx, armY);
+      ctx.lineTo(cx + f.facing * armReach, armY + (!isKick && attacking ? armLift : 18));
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx, armY + 4);
+      ctx.lineTo(cx - f.facing * 37, armY + 24);
+      ctx.stroke();
+
+      const kickReach = isDive ? 104 : isKick && attacking ? 78 + combo * 16 : 38;
+      const kickY = isDive ? f.y - 8 : f.jumping ? f.y - 68 : f.crouching ? f.y - 20 : f.y - 42;
+      ctx.beginPath();
+      ctx.moveTo(cx, f.y - 48);
+      ctx.lineTo(cx + f.facing * kickReach, isKick && attacking ? kickY : f.y - 10);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx, f.y - 48);
+      ctx.lineTo(cx - f.facing * 34, f.y - 8);
+      ctx.stroke();
+
+      ctx.fillStyle = hurt ? "#ffffff" : f.accent;
+      ctx.beginPath();
+      ctx.arc(cx, headY, 31, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#15202b";
+      ctx.beginPath();
+      ctx.arc(cx + f.facing * 11, headY - 5, 4, 0, Math.PI * 2);
+      ctx.arc(cx - f.facing * 6, headY - 5, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#15202b";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx + f.facing * 2, headY + 7, 12, .12, Math.PI - .12);
+      ctx.stroke();
+
+      ctx.fillStyle = f.color;
+      ctx.font = "900 26px Microsoft YaHei, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(f.name, cx, bodyY - 34);
+
+      if (f.isEnemy) {
+        ctx.fillStyle = "rgba(255,255,255,.78)";
+        ctx.font = "700 16px Microsoft YaHei, sans-serif";
+        ctx.fillText(f.spec.motto, cx, bodyY - 10);
+      }
+
+      if (attacking) {
+        ctx.strokeStyle = isKick || isDive ? "#ffd166" : "#ffffff";
+        ctx.lineWidth = 4 + combo;
+        ctx.globalAlpha = .62;
+        ctx.beginPath();
+        ctx.arc(cx + f.facing * (66 + combo * 9), isKick || isDive ? kickY : armY - 8, isKick || isDive ? 30 + combo * 5 : 22 + combo * 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#ffd166";
+        ctx.font = "900 20px Microsoft YaHei, sans-serif";
+        ctx.fillText(isDive ? "空降3连" : `${combo}连`, cx, bodyY - 62);
+      } else if (f.airDiveReady) {
+        ctx.fillStyle = "#ffd166";
+        ctx.font = "900 18px Microsoft YaHei, sans-serif";
+        ctx.fillText("按D空降", cx, bodyY - 62);
+      }
+
+      if (performance.now() < f.lockUntil) {
+        ctx.fillStyle = "rgba(255,255,255,.75)";
+        ctx.font = "700 15px Microsoft YaHei, sans-serif";
+        ctx.fillText("僵直", cx, bodyY - 82);
+      }
+
+      ctx.restore();
+    }
+
+    function drawDiveFighter(f, cx) {
+      const headX = cx + f.facing * 64;
+      const headY = f.y - 34;
+      const hipX = cx - f.facing * 18;
+      const hipY = f.y - 105;
+      const hurt = f.hurtTimer > 0;
+
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,.32)";
+      ctx.beginPath();
+      ctx.ellipse(cx, floorY + 5, 58, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = hurt ? "#ffffff" : f.color;
+      ctx.lineWidth = 13;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.beginPath();
+      ctx.moveTo(hipX, hipY);
+      ctx.lineTo(headX - f.facing * 18, headY - 18);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(headX - f.facing * 22, headY - 20);
+      ctx.lineTo(headX - f.facing * 70, headY - 48);
+      ctx.moveTo(headX - f.facing * 18, headY - 12);
+      ctx.lineTo(headX - f.facing * 58, headY + 16);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(hipX, hipY);
+      ctx.lineTo(hipX - f.facing * 54, hipY - 44);
+      ctx.moveTo(hipX, hipY);
+      ctx.lineTo(hipX - f.facing * 20, hipY - 70);
+      ctx.stroke();
+
+      ctx.fillStyle = hurt ? "#ffffff" : f.accent;
+      ctx.beginPath();
+      ctx.arc(headX, headY, 31, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#15202b";
+      ctx.beginPath();
+      ctx.arc(headX + f.facing * 9, headY + 5, 4, 0, Math.PI * 2);
+      ctx.arc(headX + f.facing * 8, headY - 10, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#ffd166";
+      ctx.lineWidth = 7;
+      ctx.globalAlpha = .7;
+      ctx.beginPath();
+      ctx.moveTo(headX + f.facing * 22, headY + 26);
+      ctx.lineTo(headX + f.facing * 80, headY + 86);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = f.color;
+      ctx.font = "900 26px Microsoft YaHei, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(f.name, cx, f.y - f.h - 34);
+      ctx.fillStyle = "#ffd166";
+      ctx.font = "900 20px Microsoft YaHei, sans-serif";
+      ctx.fillText("头槌空降3连", cx, f.y - f.h - 62);
+      ctx.restore();
+    }
+
+    function drawEffects() {
+      particles.forEach((p) => {
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+
+      popups.forEach((p) => {
+        ctx.globalAlpha = Math.max(0, p.life / 720);
+        ctx.fillStyle = "#fff3b0";
+        ctx.font = "900 30px Microsoft YaHei, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(p.text, p.x, p.y);
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function burst(x, y, color, count) {
+      for (let i = 0; i < count; i += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 5;
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1.4,
+          size: 3 + Math.random() * 4,
+          color,
+          life: 420 + Math.random() * 260,
+          maxLife: 680
+        });
+      }
+    }
+
+    function pop(x, y, text) {
+      popups.push({ x, y, text, life: 720 });
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function loop(now) {
+      const dt = Math.min(2, (now - lastTime) / 16.67);
+      lastTime = now;
+      update(dt, now);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      if (event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        keys.add(event.key);
+        if (gameOver) resetGame();
+      }
+      if (event.code === "Space" && !event.repeat) {
+        event.preventDefault();
+        tapSpaceJump(performance.now());
+      }
+      if ((key === "d" || key === "f") && !event.repeat) {
+        event.preventDefault();
+        if (gameOver) {
+          resetGame();
+        } else if (key === "d" && requestAirDive(player, performance.now())) {
+          return;
+        } else {
+          requestAttack(player, key === "d" ? "punch" : "kick", performance.now());
+        }
+      }
+      if (key === "s" && !event.repeat) {
+        event.preventDefault();
+        if (gameOver) {
+          resetGame();
+        } else {
+          launchRocket(performance.now());
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener("keyup", (event) => {
+      if (event.key.startsWith("Arrow")) {
+        event.preventDefault();
+        keys.delete(event.key);
+      }
+    }, { passive: false });
+
+    restartButton.addEventListener("click", resetGame);
+    canvas.addEventListener("pointerdown", () => canvas.focus());
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
